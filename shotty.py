@@ -49,8 +49,10 @@ def snapshots():
 @snapshots.command('list')
 @click.option('--project', default=None,
 	help="Only instances for project (tag Project:<name>)")
+@click.option('--all', 'list_all', default=False, is_flag=True,
+	help="List all snapshots, not just most recent")
 
-def list_snapshots(project):
+def list_snapshots(project,list_all):
     "List EC2 snapshots"
     instances = get_instances(project)
     for i in instances:
@@ -63,6 +65,8 @@ def list_snapshots(project):
                 	s.state,
                 	s.start_time.strftime("%c")
                 	)))
+
+                if s.state == 'completed' and not list_all: break
 
 
 
