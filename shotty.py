@@ -1,6 +1,7 @@
 import boto3
 import sys
 import click
+import botocore
 
 session = boto3.Session()
 ec2 = session.resource('ec2')
@@ -100,7 +101,11 @@ def stop_instances(project):
 
     for i in instances:
     	print("Stopping {0}...".format(i.id))
-    	i.stop()
+    	try:
+    		i.stop()
+    	except botocore.exceptions.ClientError as e:
+    		print ("Could not stop {0} ".format(i.id) + str(e))
+    		continue
     return
 
 
@@ -114,7 +119,12 @@ def stop_instances(project):
 
     for i in instances:
     	print("Starting {0}...".format(i.id))
-    	i.start()
+    	try:
+    		i.start()
+    	except botocore.exceptions.ClientError as e:
+    	    print ("Could not start {0} ".format(i.id) + str(e))
+    	    continue
+
     return
 
 @instances.command('create_snapshot')
