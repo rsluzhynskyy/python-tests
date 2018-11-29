@@ -121,14 +121,14 @@ def stop_instances(project):
 @click.option('--project', default=None,
     help="Only instances for project (tag Project:<name>)")
 @click.option('--force', 'force', default=False, is_flag=True,
-    help="List all snapshots, not just most recent")
+    help="Force reboot")
 
 def reboot_instances(project):
     "Reboot EC2 instances"
     instances = get_instances(project)
     if not force and not project:
         print("you need specify force or project option")
-        continue
+
 
     for i in instances:
         print("Rebooting {0}...".format(i.id))
