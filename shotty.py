@@ -16,7 +16,11 @@ def get_instances(project):
     	instances = ec2.instances.all()
 
     return instances
+         
 
+def has_pending_snapshot(volume):
+    snapshots = list(volume.snapshots.all())
+    return snapshots and snapshots[0].state == 'pending'
 
 @click.group()
 def cli():
@@ -113,6 +117,23 @@ def stop_instances(project):
     return
 
 
+@instances.command('reboot')
+@click.option('--project', default=None,
+    help="Only instances for project (tag Project:<name>)")
+
+def stop_instances(project):
+    "Reboot EC2 instances"
+    instances = get_instances(project)
+
+    for i in instances:
+        print("Rebooting {0}...".format(i.id))
+        try:
+            i.reboot()
+        except botocore.exceptions.ClientError as e:
+            print ("Could not reboot {0} ".format(i.id) + str(e))
+            continue
+    return
+
 @instances.command('start')
 @click.option('--project', default=None,
 	help="Only instances for project (tag Project:<name>)")
@@ -143,7 +164,11 @@ def create_snapshot(project):
         print("Stopping {0}...".format(i.id))
         i.stop()
         i.wait_until_stopped()
+
         for v in i.volumes.all():
+            if has_pending_snapshot(v):
+                print("Skipping")
+                continue
             print("Creating snapshot of {0}".format(v.id))
             v.create_snapshot(Description="Created by Roman")
 
