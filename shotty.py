@@ -127,7 +127,9 @@ def reboot_instances(project):
     "Reboot EC2 instances"
     instances = get_instances(project)
     if not force and not project:
+        print("you need specify force or project option")
         continue
+
     for i in instances:
         print("Rebooting {0}...".format(i.id))
         try:
