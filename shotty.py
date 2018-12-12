@@ -103,9 +103,16 @@ def list_instances(project):
 @click.option('--project', default=None,
 	help="Only instances for project (tag Project:<name>)")
 
-def stop_instances(project):
+@click.option('--force', 'force', default=False, is_flag=True,
+    help="Force reboot")
+
+def stop_instances(project,force):
     "Stop EC2 instances"
     instances = get_instances(project)
+
+    if not force and not project:
+        print("ERR: You need to specify --force or --project option in order to reboot instances")
+        exit(2)
 
     for i in instances:
     	print("Stopping {0}...".format(i.id))
@@ -120,15 +127,16 @@ def stop_instances(project):
 @instances.command('reboot')
 @click.option('--project', default=None,
     help="Only instances for project (tag Project:<name>)")
+
 @click.option('--force', 'force', default=False, is_flag=True,
     help="Force reboot")
 
-def reboot_instances(project):
+def reboot_instances(project,force):
     "Reboot EC2 instances"
     instances = get_instances(project)
     if not force and not project:
-        print("you need specify force or project option")
-
+        print("ERR: You need ot specify --force or --project option in order to reboot instances")
+        exit(2)
 
     for i in instances:
         print("Rebooting {0}...".format(i.id))
@@ -142,10 +150,16 @@ def reboot_instances(project):
 @instances.command('start')
 @click.option('--project', default=None,
 	help="Only instances for project (tag Project:<name>)")
+@click.option('--force', 'force', default=False, is_flag=True,
+    help="Force reboot")
 
-def start_instances(project):
+def start_instances(project,force):
     "Start EC2 instances"
     instances = get_instances(project)
+
+    if not force and not project:
+        print("ERR: You need ot specify --force or --project option in order to start instances")
+        exit(2)
 
     for i in instances:
     	print("Starting {0}...".format(i.id))
@@ -160,10 +174,17 @@ def start_instances(project):
 @instances.command('create_snapshot')
 @click.option('--project', default=None,
     help="Only instances for project (tag Project:<name>)")
+@click.option('--force', 'force', default=False, is_flag=True,
+    help="Force reboot")
 
-def create_snapshot(project):
+
+def create_snapshot(project, force):
     "Create snapshots"
     instances = get_instances(project)
+
+    if not force and not project:
+        print("ERR: You need ot specify --force or --project option in order to start instances")
+        exit(2)
 
     for i in instances:
         print("Stopping {0}...".format(i.id))
