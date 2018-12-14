@@ -6,12 +6,10 @@ import botocore
 session = boto3.Session()
 ec2 = session.resource('ec2')
 
+
 @click.group()
 def cli():
     """Manages snapshots"""
-
-@click.option('--profile', default='default',
-    help="Specify AWS profile. OPTIONAL")
 
 def get_instances(project):
     instances = []
