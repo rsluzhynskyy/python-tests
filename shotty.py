@@ -209,7 +209,7 @@ def create_snapshot(project, force):
             try:
                 v.create_snapshot(Description="Created by Roman")
             except botocore.exceptions.ClientError as e:
-                print ("Could not create {0} ".format(v.id) + str(e))
+                print ("Could not create snapshot for {0} ".format(v.id) + str(e))
                 continue
 
             
