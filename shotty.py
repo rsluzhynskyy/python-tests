@@ -3,17 +3,25 @@ import sys
 import click
 import botocore
 
-session = boto3.Session()
-ec2 = session.resource('ec2')
 
+session = None
+
+# session = boto3.Session(profile_name="default")
+# ec2 = session.resource('ec2')
 
 @click.group()
-def cli():
+@click.option('--profile', default=None, help="Specify AWS profile. OPTIONAL")
+def cli(profile):
     """Manages snapshots"""
+    global session
+    if profile is None:
+        profile = 'default'
+    session = boto3.Session(profile_name=profile)
+
 
 def get_instances(project):
+    ec2 = session.resource('ec2')    
     instances = []
-
     if project:
     	filters = [{'Name': 'tag:Project', 'Values':[project]}]
     	instances = ec2.instances.filter(Filters=filters)
@@ -198,7 +206,13 @@ def create_snapshot(project, force):
                 print("Skipping")
                 continue
             print("Creating snapshot of {0}".format(v.id))
-            v.create_snapshot(Description="Created by Roman")
+            try:
+                v.create_snapshot(Description="Created by Roman")
+            except botocore.exceptions.ClientError as e:
+                print ("Could not create snapshot for {0} ".format(v.id) + str(e))
+                continue
+
+            
 
         i.start()
         i.wait_until_running()
