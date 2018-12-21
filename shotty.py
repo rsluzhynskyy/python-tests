@@ -212,6 +212,7 @@ def create_snapshot(project, force, instance):
         exit(2)
 
     for i in instances:
+        instance_state = i.state["Name"]
         print("Stopping {0}...".format(i.id))
         i.stop()
         i.wait_until_stopped()
@@ -227,10 +228,9 @@ def create_snapshot(project, force, instance):
                 print ("Could not create snapshot for {0} ".format(v.id) + str(e))
                 continue
 
-            
-
-        i.start()
-        i.wait_until_running()
+        if instance_state == "running":
+            i.start()
+            i.wait_until_running()
     print("Job is done")
     return
 
