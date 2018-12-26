@@ -13,12 +13,13 @@ instance = None
 
 @click.group()
 @click.option('--profile', default=None, help="Specify AWS profile. OPTIONAL")
-def cli(profile):
+@click.option('--region', default=None, help="Specify AWS region. OPTIONAL")
+def cli(profile, region):
     """Manages snapshots"""
     global session, instance
     if profile is None:
         profile = 'default'
-    session = boto3.Session(profile_name=profile)
+    session = boto3.Session(profile_name=profile, region_name=region)
 
 
 def get_instances(project,instance):
@@ -218,10 +219,7 @@ def create_snapshot(project, force, instance, age):
         for i in instances:
             instance_state = i.state["Name"]
             for v in i.volumes.all():
-                snapshot_iterator = sorted(v.snapshots.all(), key=lambda ss:ss.start_time, reverse=True)[0]
-
-                if not snapshot_iterator:
-                    print(i.id, v.id, s.start_time)
+                if not list(v.snapshots.all()):
                     print("Stopping {0}...".format(i.id))
                     i.stop()
                     i.wait_until_stopped()
@@ -235,6 +233,7 @@ def create_snapshot(project, force, instance, age):
                         print ("Could not create snapshot for {0} ".format(v.id) + str(e))
                         continue
                 else:
+                    snapshot_iterator = sorted(v.snapshots.all(), key=lambda ss:ss.start_time, reverse=True)[0]
                     timeLimit = datetime.datetime.now().replace(microsecond=0) - datetime.timedelta(days=age)
                     lastSnapTime = datetime.datetime.strptime(str(snapshot_iterator.start_time)[:-6], '%Y-%m-%d %H:%M:%S')
                     print("latest snapshot for instance {0}, volume{1} was done {2}".format(i.id, v.id, snapshot_iterator.start_time))
