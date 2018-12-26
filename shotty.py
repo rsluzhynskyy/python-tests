@@ -2,6 +2,7 @@ import boto3
 import sys
 import click
 import botocore
+import datetime
 
 
 session = None
@@ -74,6 +75,7 @@ def snapshots():
     help="List all snapshots, not just most recent")
 @click.option('--instance', default=None,
     help="Only for specified instance-id")
+
 
 def list_snapshots(project,list_all,instance):
     "List EC2 snapshots"
@@ -201,38 +203,88 @@ def start_instances(project,force,instance):
     help="Force reboot")
 @click.option('--instance', default=None,
     help="Only for specified instance-id")
+@click.option('--age', default=None, type=int,
+    help="Create snapshot only if last snapshot older than <age>")
 
-
-def create_snapshot(project, force, instance):
+def create_snapshot(project, force, instance, age):
     "Create snapshots"
     instances = get_instances(project,instance)
 
     if not force and not project and not instance:
-        print("ERR: You need ot specify --force or --project or --instance option in order to start instances")
+        print("ERR: You need to specify --force or --project or --instance option in order to start instances")
         exit(2)
+    
+    if age:
+        for i in instances:
+            instance_state = i.state["Name"]
+            for v in i.volumes.all():
+                snapshot_iterator = v.snapshots.limit(
+                    count=1
+                )
 
-    for i in instances:
-        instance_state = i.state["Name"]
-        print("Stopping {0}...".format(i.id))
-        i.stop()
-        i.wait_until_stopped()
+                if not list(snapshot_iterator):
+                    print(i.id, v.id, s.start_time)
+                    print("Stopping {0}...".format(i.id))
+                    i.stop()
+                    i.wait_until_stopped()
+                    if has_pending_snapshot(v):
+                        print("Skipping")
+                        continue
+                    print("Creating snapshot of {0}".format(v.id))
+                    try:
+                        v.create_snapshot(Description="Created by Roman")
+                    except botocore.exceptions.ClientError as e:
+                        print ("Could not create snapshot for {0} ".format(v.id) + str(e))
+                        continue
+                else:
+                    for s in snapshot_iterator:
+                        timeLimit = datetime.datetime.now().replace(microsecond=0) - datetime.timedelta(days=age)
+                        lastSnapTime = datetime.datetime.strptime(str(s.start_time)[:-6], '%Y-%m-%d %H:%M:%S')
+                        if timeLimit > lastSnapTime:
+                            print(i.id, v.id, s.start_time)
+                            print("Stopping {0}...".format(i.id))
+                            i.stop()
+                            i.wait_until_stopped()
+                            if has_pending_snapshot(v):
+                                print("Skipping")
+                                continue
+                            print("Creating snapshot of {0}".format(v.id))
+                            try:
+                                v.create_snapshot(Description="Created by Roman")
+                            except botocore.exceptions.ClientError as e:
+                                print ("Could not create snapshot for {0} ".format(v.id) + str(e))
+                                continue
+            if instance_state == "running":
+                i.start()
+                i.wait_until_running()
+        print("Job is done")
+        return
 
-        for v in i.volumes.all():
-            if has_pending_snapshot(v):
-                print("Skipping")
-                continue
-            print("Creating snapshot of {0}".format(v.id))
-            try:
-                v.create_snapshot(Description="Created by Roman")
-            except botocore.exceptions.ClientError as e:
-                print ("Could not create snapshot for {0} ".format(v.id) + str(e))
-                continue
 
-        if instance_state == "running":
-            i.start()
-            i.wait_until_running()
-    print("Job is done")
-    return
+    else:
+
+        for i in instances:
+            instance_state = i.state["Name"]
+            print("Stopping {0}...".format(i.id))
+            i.stop()
+            i.wait_until_stopped()
+
+            for v in i.volumes.all():
+                if has_pending_snapshot(v):
+                    print("Skipping")
+                    continue
+                print("Creating snapshot of {0}".format(v.id))
+                try:
+                    v.create_snapshot(Description="Created by Roman")
+                except botocore.exceptions.ClientError as e:
+                    print ("Could not create snapshot for {0} ".format(v.id) + str(e))
+                    continue
+
+            if instance_state == "running":
+                i.start()
+                i.wait_until_running()
+        print("Job is done")
+        return
 
 
 if __name__ == '__main__':
