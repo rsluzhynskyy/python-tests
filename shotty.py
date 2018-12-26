@@ -218,11 +218,9 @@ def create_snapshot(project, force, instance, age):
         for i in instances:
             instance_state = i.state["Name"]
             for v in i.volumes.all():
-                snapshot_iterator = v.snapshots.limit(
-                    count=1
-                )
+                snapshot_iterator = sorted(v.snapshots.all(), key=lambda ss:ss.start_time, reverse=True)[0]
 
-                if not list(snapshot_iterator):
+                if not snapshot_iterator:
                     print(i.id, v.id, s.start_time)
                     print("Stopping {0}...".format(i.id))
                     i.stop()
@@ -237,23 +235,23 @@ def create_snapshot(project, force, instance, age):
                         print ("Could not create snapshot for {0} ".format(v.id) + str(e))
                         continue
                 else:
-                    for s in snapshot_iterator:
-                        timeLimit = datetime.datetime.now().replace(microsecond=0) - datetime.timedelta(days=age)
-                        lastSnapTime = datetime.datetime.strptime(str(s.start_time)[:-6], '%Y-%m-%d %H:%M:%S')
-                        if timeLimit > lastSnapTime:
-                            print(i.id, v.id, s.start_time)
-                            print("Stopping {0}...".format(i.id))
-                            i.stop()
-                            i.wait_until_stopped()
-                            if has_pending_snapshot(v):
-                                print("Skipping")
-                                continue
-                            print("Creating snapshot of {0}".format(v.id))
-                            try:
-                                v.create_snapshot(Description="Created by Roman")
-                            except botocore.exceptions.ClientError as e:
-                                print ("Could not create snapshot for {0} ".format(v.id) + str(e))
-                                continue
+                    timeLimit = datetime.datetime.now().replace(microsecond=0) - datetime.timedelta(days=age)
+                    lastSnapTime = datetime.datetime.strptime(str(snapshot_iterator.start_time)[:-6], '%Y-%m-%d %H:%M:%S')
+                    print("latest snapshot for instance {0}, volume{1} was done {2}".format(i.id, v.id, snapshot_iterator.start_time))
+                    if timeLimit > lastSnapTime:
+                        print(i.id, v.id, snapshot_iterator.start_time)
+                        print("Stopping {0}...".format(i.id))
+                        i.stop()
+                        i.wait_until_stopped()
+                        if has_pending_snapshot(v):
+                            print("Skipping")
+                            continue
+                        print("Creating snapshot of {0}".format(v.id))
+                        try:
+                            v.create_snapshot(Description="Created by Roman")
+                        except botocore.exceptions.ClientError as e:
+                            print ("Could not create snapshot for {0} ".format(v.id) + str(e))
+                            continue
             if instance_state == "running":
                 i.start()
                 i.wait_until_running()
